@@ -4,6 +4,9 @@ import os
 
 clear = lambda: os.system('cls')
 
+DATA = [50, 0.5, 75, 12, 10, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
+
+
 #Classes
 class FailureWedge:
     def __init__(self, density, coordinates, GWT_level=-1, water_density=10):
@@ -149,6 +152,7 @@ def calculate_p_active(weight, cohesion, adhesion, wedge_angle, wall_angle, int_
            / (math.cos(math.radians(phi))*math.tan(math.radians(omega))+math.sin(math.radians(phi)))
 
 def get_inputs():
+    """gets input from user"""
     no_wedges = int(input("\nselect the number of wedges: "))
     inclined_width = float(input("\nselect the desired inclined step width (m): "))
     print("\nYour calculations will cover {:.4f} meters\n\n".format(inclined_width * no_wedges))
@@ -410,7 +414,6 @@ def solve_and_present():
 
 
 ###################################################
-DATA = [50, 0.5, 75, 12, 10, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
 
 def one_cycle():
     global DATA
