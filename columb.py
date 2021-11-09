@@ -17,6 +17,7 @@ class FailureWedge:
         self.unsat_coordinates = []
 
         self.lines = self.gen_lines()
+        self.resolve_GWT(GWT_level)
         self.weight = self.calculate_weight(GWT_level)
 
     def is_homogenous(self, GWT_level):
@@ -35,21 +36,32 @@ class FailureWedge:
     def get_weight(self):
         return self.weight
 
+    def get_coordinates(self):
+        return self.coordinates
+
+    def get_sat_coordinates(self):
+        return self.sat_coordinates
+
+    def get_unsat_coordinates(self):
+        return self.unsat_coordinates
+
     def set_sat_coordinates(self, cor):
         self.sat_coordinates = cor
 
     def set_unsat_coordinates(self, cor):
         self.unsat_coordinates = cor
 
-    def calculate_weight(self, GWT_level):
+    def resolve_GWT(self, GWT_level):
         if self.is_homogenous(GWT_level):
-            return area_calculation(self.coordinates) * self.density
+            self.set_unsat_coordinates(self.get_coordinates())
+            self.set_sat_coordinates([])
+            return area_calculation(self.get_coordinates()) * self.density
 
         intersection_points_with_GWT = []
         line2 = [(0, GWT_level), (1, GWT_level)]
 
         for line in self.lines:
-            line1 = [self.coordinates[line[0]], self.coordinates[line[1]]]
+            line1 = [self.get_coordinates()[line[0]], self.get_coordinates()[line[1]]]
             point = intersection_point(line1,line2)
             if point not in intersection_points_with_GWT: intersection_points_with_GWT.append(point)
             else: intersection_points_with_GWT.append(None)
@@ -69,23 +81,41 @@ class FailureWedge:
 
         #update sat and unsat coordinates
 
-        self.set_unsat_coordinates(self.coordinates[:indices_of_intersection[0]+1] + self.coordinates[indices_of_intersection[1]:])
-        self.set_sat_coordinates(self.coordinates[indices_of_intersection[0]:indices_of_intersection[1]+1])
+        self.set_unsat_coordinates(self.get_coordinates()[:indices_of_intersection[0]+1] + self.get_coordinates()[indices_of_intersection[1]:])
+        self.set_sat_coordinates(self.get_coordinates()[indices_of_intersection[0]:indices_of_intersection[1]+1])
 
-        #calculate weight
-        return area_calculation(self.sat_coordinates) * (self.density - self.water_density) + area_calculation(self.unsat_coordinates) * self.density
+    def get_wedge_cg(self):
+        return
+
+
+    def calculate_weight(self, GWT_level):
+        return area_calculation(self.get_sat_coordinates()) * (self.density - self.water_density) + area_calculation(self.get_unsat_coordinates()) * self.density
 
 ###################################################
 
 #Functions
 def area_calculation(list_of_coordinates):
     """takes a list of 2D-coordinates(tuples) and reutrns area"""
+    if len(list_of_coordinates) == 0: return 0
     area = 0
     l = len(list_of_coordinates)
     for iter in range(l-1):
         area = area + list_of_coordinates[iter][0]*list_of_coordinates[iter+1][1] - list_of_coordinates[iter][1]*list_of_coordinates[iter+1][0]
     area = area + list_of_coordinates[l-1][0]*list_of_coordinates[0][1] - list_of_coordinates[l-1][1]*list_of_coordinates[0][0]
     return abs(area/2)
+
+def get_cg(list_of_coordinates):
+    """gets CG of list of coordinates"""
+    l = len(list_of_coordinates)
+    if l == 0 : return 0
+    s = [0.0, 0.0]
+    for coor in list_of_coordinates:
+        s[0] += coor[0]
+        s[1] += coor[1]
+
+    return(s[0]/l, s[1]/l)
+
+
 
 def distance(point1, point2):
     """returns distance between two points"""
@@ -188,7 +218,7 @@ def plot_wedge(active_failure_wedge, w_type):
     soil_x_coor = []
     soil_y_coor = []
 
-    all_coor = list(active_failure_wedge.coordinates)
+    all_coor = list(active_failure_wedge.get_coordinates())
     soil = all_coor[all_coor.index((0, 0)):]
     wall = all_coor[:all_coor.index((0, 0)) + 1]
 
@@ -203,7 +233,73 @@ def plot_wedge(active_failure_wedge, w_type):
     if w_type == 0: plt.plot(soil_x_coor, soil_y_coor, "grey", linewidth=0.5)
     else: plt.plot(soil_x_coor, soil_y_coor, "brown", linewidth=2.0)
 
-def main_function(data):
+
+def line_loads_display(line_loads):
+    final = """"""
+    for line in line_loads:
+        final += (" "*56 + str(line[0]) + " @ " +str(line[1])+"\n")
+    return final
+
+def show_data():
+    print("""
+                You have input:
+                00: number of wedges,                   {:.0f}
+                01: inclined step width (m),            {:.2f}
+                02: wall angle (deg),                   {:.2f}
+                03: backfill angle (deg),               {:.2f}
+                04: vertical wall height (m),           {:.2f}
+                05: density (kN/m3),                    {:.2f}
+                06: cohesion (kPa),                     {:.2f}
+                07: adhesion (kPa),                     {:.2f}
+                08: internal friction angle (deg),      {:.2f}
+                09: wall friction angle (deg),          {:.2f}
+                10: uniform surcharge (kPa),            {:.2f}
+                11: GWT level (m),                      {:.2f}\n""".format(DATA[0], DATA[1], DATA[2], DATA[3], DATA[4],
+                                                                       DATA[5], DATA[6], DATA[7], DATA[8], DATA[9], DATA[10], DATA[11])
+            + " " * 16+"""12: Line Loads (kN/m') @ distance (m), \n"""+line_loads_display(DATA[12]))
+
+def solve_and_present():
+    solution = main_function(DATA)
+    clear()
+    if DATA[12][0][0] == 0 and len(DATA[12])  == 1:
+        print("""
+        *********************************************************
+        ************************ SOLUTION ***********************
+        *********************************************************
+        
+        FAILURE WEDGE INCLINED DISTANCE: {:.3f} m
+        FAILUER WEDGE ANGLE:             {:.3f} deg
+        ACTIVE EARTH PRESSURE:           {:.3f} kN/m'
+        
+        *********************************************************
+        """.format(solution[0][0], solution[0][1], solution[1]) + "\n" * 4)
+    else:
+        lls = ""
+        for i in range(len(solution[2:])):
+            if i == 0: sol = solution[i+2]
+            else: sol = solution[i+2] - solution[i+1]
+            lls += " "*49+ "{:.3f}".format(sol)+"\n"
+
+
+        print("""
+        *********************************************************
+        ************************ SOLUTION ***********************
+        *********************************************************
+        
+        NATURAL FAILURE WEDGE INCLINED DISTANCE: {:.3f} m
+        FAILUER WEDGE ANGLE:                     {:.3f} deg
+        ACTIVE EARTH PRESSURE:                   {:.3f} kN/m'
+        
+        DELTA ACTIVE PRESSURES:                  kN/m'\n""".format(solution[0][0], solution[0][1], solution[1]) + lls + """
+        
+        *********************************************************""" + "\n" * 4)
+
+    show_data()
+
+
+###################################################
+#MAIN FUNCTION
+def main_function(data, water_density=10):
     """
     UNITS IN m and KN
     :param no_wedges: number of wedges
@@ -235,8 +331,7 @@ def main_function(data):
     wall_friction,
     uniform_surcharge,
     GWT_level,
-    line_load,
-    water_density] = data
+    line_load] = data
 
 
     # define wall points coordinates
@@ -352,67 +447,6 @@ def main_function(data):
             result.append(delta)
         return result
 
-def line_loads_display(line_loads):
-    final = """"""
-    for line in line_loads:
-        final += (" "*56 + str(line[0]) + " @ " +str(line[1])+"\n")
-    return final
-
-def show_data():
-    print("""
-                You have input:
-                00: number of wedges,                   {:.0f}
-                01: inclined step width (m),            {:.2f}
-                02: wall angle (deg),                   {:.2f}
-                03: backfill angle (deg),               {:.2f}
-                04: vertical wall height (m),           {:.2f}
-                05: density (kN/m3),                    {:.2f}
-                06: cohesion (kPa),                     {:.2f}
-                07: adhesion (kPa),                     {:.2f}
-                08: internal friction angle (deg),      {:.2f}
-                09: wall friction angle (deg),          {:.2f}
-                10: uniform surcharge (kPa),            {:.2f}
-                11: GWT level (m),                      {:.2f}\n""".format(DATA[0], DATA[1], DATA[2], DATA[3], DATA[4],
-                                                                       DATA[5], DATA[6], DATA[7], DATA[8], DATA[9], DATA[10], DATA[11])
-            + " " * 16+"""12: Line Loads (kN/m') @ distance (m), \n"""+line_loads_display(DATA[12]))
-
-def solve_and_present():
-    solution = main_function(DATA)
-    clear()
-    if DATA[12][0][0] == 0 and len(DATA[12])  == 1:
-        print("""
-        *********************************************************
-        ************************ SOLUTION ***********************
-        *********************************************************
-        
-        FAILURE WEDGE INCLINED DISTANCE: {:.3f} m
-        FAILUER WEDGE ANGLE:             {:.3f} deg
-        ACTIVE EARTH PRESSURE:           {:.3f} kN/m'
-        
-        *********************************************************
-        """.format(solution[0][0], solution[0][1], solution[1]) + "\n" * 4)
-    else:
-        lls = ""
-        for i in range(len(solution[2:])):
-            if i == 0: sol = solution[i+2]
-            else: sol = solution[i+2] - solution[i+1]
-            lls += " "*49+ "{:.3f}".format(sol)+"\n"
-
-
-        print("""
-        *********************************************************
-        ************************ SOLUTION ***********************
-        *********************************************************
-        
-        NATURAL FAILURE WEDGE INCLINED DISTANCE: {:.3f} m
-        FAILUER WEDGE ANGLE:                     {:.3f} deg
-        ACTIVE EARTH PRESSURE:                   {:.3f} kN/m'
-        
-        DELTA ACTIVE PRESSURES:                  kN/m'\n""".format(solution[0][0], solution[0][1], solution[1]) + lls + """
-        
-        *********************************************************""" + "\n" * 4)
-
-
 ###################################################
 
 def one_cycle():
@@ -421,7 +455,7 @@ def one_cycle():
     clear()
     print("""
        ***********************************************************************************************************
-       ************************** WELCOME TO COLUMB ANALYTICAL 1.2.1 | Abdalla Talaat© ***************************
+       ************************** WELCOME TO COLUMB ANALYTICAL 1.2.2 | Abdalla Talaat© ***************************
        ***********************************************************************************************************
        \n\n
        """)
@@ -444,7 +478,6 @@ while(True):
     one_cycle()
     answered = False
     while not answered:
-        show_data()
         q = input("\nWould you like to calculate again (y/n)?\n Or would you like to edit (e)?\n Or would you like to plot the result (p)?  ")
 
         if q == "y":
@@ -455,41 +488,47 @@ while(True):
             quit()
         elif q=="e":
             clear()
-            edi = int(input("""
-            Choose what to edit:
-            0: number of wedges,
-            1: inclined step width,
-            2: wall angle,
-            3: backfill angle,
-            4: vertical wall height,
-            5: density,
-            6: cohesion,
-            7: adhesion,
-            8: internal friction angle,
-            9: wall friction angle,
-            10: uniform surcharge,
-            11: GWT level
-            12: Line Loads
-            """))
+            show_data()
+            try:
+                edi = int(input("""
+                Choose what to edit:
+                0: number of wedges,
+                1: inclined step width,
+                2: wall angle,
+                3: backfill angle,
+                4: vertical wall height,
+                5: density,
+                6: cohesion,
+                7: adhesion,
+                8: internal friction angle,
+                9: wall friction angle,
+                10: uniform surcharge,
+                11: GWT level
+                12: Line Loads
+                """))
 
-            if edi==0:
-                new_value = input("Input the new value:  ")
-                DATA[0] = int(new_value)
-            elif edi==12:
-                input_line_loads = [float(x) for x in
-                                    input("\nselect consecutively the desired line load(s) and inclined distance(s)\n"
-                                          "from R.Wall top separated by a spaces (0 0 for no line load) (kN/m'): ").split()]
-                line_loads = []
-                for i in range(0, len(input_line_loads), 2):
-                    line_loads.append(tuple([input_line_loads[i], input_line_loads[i + 1]]))
-                DATA[12] = line_loads
-            else:
-                new_value = input("Input the new value:  ")
-                DATA[edi] = float(new_value)
+                if edi == 0:
+                    DATA[0] = int(input("Input the new value:  "))
+                elif edi == 12:
+                    input_line_loads = [float(x) for x in
+                                        input(
+                                            "\nselect consecutively the desired line load(s) and inclined distance(s)\n"
+                                            "from R.Wall top separated by a spaces (0 0 for no line load) (kN/m'): ").split()]
+                    line_loads = []
+                    for i in range(0, len(input_line_loads), 2):
+                        line_loads.append(tuple([input_line_loads[i], input_line_loads[i + 1]]))
+                    DATA[12] = line_loads
+                else:
+                    DATA[edi] = float(input("Input the new value:  "))
+            except:
+                print("BAD INPUT")
+
+
         elif q=="p":
             plt.clf()
             solve_and_present()
             plt.gca().set_aspect('equal', adjustable='box')
             plt.show()
-        else: clear()
-
+        else:
+            clear()
+            show_data()
