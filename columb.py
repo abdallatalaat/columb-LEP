@@ -5,6 +5,22 @@ import os
 clear = lambda: os.system('cls')
 
 DATA = [50, 0.5, 75, 12, 10, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
+INPUT_MSGS = [("int", "\nselect the number of wedges:                                         "),
+              ("float", "\nselect the desired inclined step width (m):                        " ),
+              ("float", "\nselect the desired wall angle (deg):                               " ),
+              ("float", "\nselect the desired backfill angle (deg):                           " ),
+              ("float", "\nselect the desired vertical wall height (m):                       " ),
+              ("float", "\nselect the desired soil saturated density (kN/m3):                 " ),
+              ("float", "\nselect the desired cohesion (shear param) (kPa):                   " ),
+              ("float", "\nselect the desired adhesion (interface param) (kPa):               " ),
+              ("float", "\nselect the desired internal friction angle (shear param) (deg):    " ),
+              ("float", "\nselect the desired wall friction angle (interface param) (deg):    " ),
+              ("float", "\nselect the uniform surcharge value (0 if no surcharge) (kPa):      " ),
+              ("float", "\nselect the desired GWT level from base (-1 if no GWT) (m):         " ),
+              ("float", "\nselect the desired GWT level from base (-1 if no GWT) (m):         " ),
+              ("line", "\nselect consecutively the desired line load(s) and inclined distance(s)\n"
+                        "from R.Wall top separated by a spaces (0 0 for no line load) (kN/m'): ")
+              ]
 
 
 #Classes
@@ -183,6 +199,7 @@ def calculate_p_active(weight, cohesion, adhesion, wedge_angle, wall_angle, int_
 
 def get_inputs():
     """gets input from user"""
+    inputs = []
     no_wedges = int(input("\nselect the number of wedges: "))
     inclined_width = float(input("\nselect the desired inclined step width (m): "))
     print("\nYour calculations will cover {:.4f} meters\n\n".format(inclined_width * no_wedges))
@@ -449,33 +466,36 @@ def main_function(data, water_density=10):
 
 ###################################################
 
-def one_cycle():
+#initializer function
+def initializer():
     global DATA
 
     clear()
     print("""
-       ***********************************************************************************************************
-       ************************** WELCOME TO COLUMB ANALYTICAL 1.2.2 | Abdalla Talaat© ***************************
-       ***********************************************************************************************************
-       \n\n
-       """)
+           ***********************************************************************************************************
+           ************************** WELCOME TO COLUMB ANALYTICAL 1.2.2 | Abdalla Talaat© ***************************
+           ***********************************************************************************************************
+           \n\n
+           """)
 
     print(show_data())
 
-    a = input("input (n) to add new data. press Enter to solve using existing data.")
+    a = input("input (n) to add new data. press Enter to solve using existing data.  ")
+    done = False
+    while not done:
+        if a == "n":
+            try:
+                DATA = list(get_inputs())
+                done = True
+            except:
+                print("BAD INPUT")
 
-    if a == "n":
-        try: DATA = list(get_inputs())
-        except:
-            print("BAD INPUT")
-            quit()
+        else: solve_and_present()
 
-    else: solve_and_present()
-
-
+#main loop
 while(True):
 
-    one_cycle()
+    initializer()
     answered = False
     while not answered:
         q = input("\nWould you like to calculate again (y/n)?\n Or would you like to edit (e)?\n Or would you like to plot the result (p)?  ")
