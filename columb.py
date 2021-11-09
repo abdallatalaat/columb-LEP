@@ -4,6 +4,7 @@ import os
 
 clear = lambda: os.system('cls')
 
+#Global Variables
 DATA = [50, 0.5, 75, 12, 10, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
 INPUT_MSGS = [("int", "\nselect the number of wedges: "),
               ("float", "\nselect the desired inclined step width (m): " ),
@@ -33,12 +34,11 @@ class FailureWedge:
 
         self.lines = self.gen_lines()
         self.resolve_GWT(GWT_level)
-        self.weight = self.calculate_weight(GWT_level)
+        self.weight = self.calculate_weight()
 
     def is_homogenous(self, GWT_level):
         if GWT_level == -1: return True
         return False
-
     def gen_lines(self):
         lines = []  # list of tuples. each tuple has coordinate indicies in self.coordinates for a line
         l = len(self.coordinates)
@@ -47,36 +47,20 @@ class FailureWedge:
         lines.append((l - 1, 0))
 
         return lines
-
-    def get_weight(self):
-        return self.weight
-
-    def get_coordinates(self):
-        return self.coordinates
-
-    def get_sat_coordinates(self):
-        return self.sat_coordinates
-
-    def get_unsat_coordinates(self):
-        return self.unsat_coordinates
-
     def set_sat_coordinates(self, cor):
         self.sat_coordinates = cor
-
     def set_unsat_coordinates(self, cor):
         self.unsat_coordinates = cor
-
     def resolve_GWT(self, GWT_level):
         if self.is_homogenous(GWT_level):
-            self.set_unsat_coordinates(self.get_coordinates())
+            self.set_unsat_coordinates(self.coordinates)
             self.set_sat_coordinates([])
-            return area_calculation(self.get_coordinates()) * self.density
 
         intersection_points_with_GWT = []
         line2 = [(0, GWT_level), (1, GWT_level)]
 
         for line in self.lines:
-            line1 = [self.get_coordinates()[line[0]], self.get_coordinates()[line[1]]]
+            line1 = [self.coordinates[line[0]], self.coordinates[line[1]]]
             point = intersection_point(line1,line2)
             if point not in intersection_points_with_GWT: intersection_points_with_GWT.append(point)
             else: intersection_points_with_GWT.append(None)
@@ -96,19 +80,26 @@ class FailureWedge:
 
         #update sat and unsat coordinates
 
-        self.set_unsat_coordinates(self.get_coordinates()[:indices_of_intersection[0]+1] + self.get_coordinates()[indices_of_intersection[1]:])
-        self.set_sat_coordinates(self.get_coordinates()[indices_of_intersection[0]:indices_of_intersection[1]+1])
+        self.set_unsat_coordinates(self.coordinates[:indices_of_intersection[0]+1] + self.coordinates[indices_of_intersection[1]:])
+        self.set_sat_coordinates(self.coordinates[indices_of_intersection[0]:indices_of_intersection[1]+1])
+    def get_wedge_cg(self, uniform_surcharge, dista, init_soil_coor, backfill_angle):
 
-    def get_wedge_cg(self):
-        return
+        surch_coor = (init_soil_coor[0]+ dista*math.cos(math.radians(backfill_angle))/2,
+                      init_soil_coor[1]+ dista*math.sin(math.radians(backfill_angle))/2)
+        sur_line = uniform_surcharge * dista
 
+        sat_cg = get_cg(self.sat_coordinates)
+        unsat_cg = get_cg(self.unsat_coordinates)
 
-    def calculate_weight(self, GWT_level):
-        return area_calculation(self.get_sat_coordinates()) * (self.density - self.water_density) + area_calculation(self.get_unsat_coordinates()) * self.density
+        return ((surch_coor[0]*sur_line + unsat_cg[0]*self.density + sat_cg[0]*(self.density-self.water_density))/(sur_line+2*self.density-self.water_density),
+                (surch_coor[1]*sur_line + unsat_cg[1]*self.density + sat_cg[1]*(self.density-self.water_density))/(sur_line+2*self.density-self.water_density))
+
+    def calculate_weight(self):
+        return area_calculation(self.sat_coordinates) * (self.density - self.water_density) + area_calculation(self.unsat_coordinates) * self.density
 
 ###################################################
 
-#Functions
+#Helper Functions
 def area_calculation(list_of_coordinates):
     """takes a list of 2D-coordinates(tuples) and reutrns area"""
     if len(list_of_coordinates) == 0: return 0
@@ -118,7 +109,6 @@ def area_calculation(list_of_coordinates):
         area = area + list_of_coordinates[iter][0]*list_of_coordinates[iter+1][1] - list_of_coordinates[iter][1]*list_of_coordinates[iter+1][0]
     area = area + list_of_coordinates[l-1][0]*list_of_coordinates[0][1] - list_of_coordinates[l-1][1]*list_of_coordinates[0][0]
     return abs(area/2)
-
 def get_cg(list_of_coordinates):
     """gets CG of list of coordinates"""
     l = len(list_of_coordinates)
@@ -129,18 +119,13 @@ def get_cg(list_of_coordinates):
         s[1] += coor[1]
 
     return(s[0]/l, s[1]/l)
-
-
-
 def distance(point1, point2):
     """returns distance between two points"""
     return math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
-
 def isBetween(middle_point, line):
     """checks if a point lies on a st. line between two other points"""
     if distance(line[0], middle_point) <= distance(line[0], line[1]): return True
     return False
-
 def intersection_point(line1, line2):
     """takes lines as a list of two 2D coordinates(tuples) and returns the coordinate of their point of intersection.
     if no intersection is found returns None"""
@@ -173,13 +158,56 @@ def intersection_point(line1, line2):
     if not isBetween(solution, line1): return None
 
     return solution
-
 def line_angle(point1, point2):
     """calculates the slope of a line"""
     if (point1[0]-point2[0]) == 0: return float('inf')
     slope = (point2[1]-point1[1]) / (point2[0]-point1[0])
     return math.degrees(math.atan(slope))
+def format_lines(inputted):
+    input_line_loads = [float(x) for x in inputted.split()]
+    line_loads = []
+    for i in range(0, len(input_line_loads), 2):
+        line_loads.append(tuple([input_line_loads[i], input_line_loads[i + 1]]))
+    return line_loads
+def get_p_active_point(wall_coordinates, angle, cg):
+    arb_point = (cg[0] - 1000 * math.cos(math.radians(angle)), cg[1] - 1000 * math.sin(math.radians(angle)))
+    return intersection_point(wall_coordinates, [cg,arb_point])
 
+#plot-related
+def plot_wedge(active_failure_wedge, w_type):
+    """
+    plots a wedge object
+    :param active_failure_wedge: wedge object
+    :param w_type: wedge type: 0 if not the failure wedge
+    :return: None
+    """
+
+    soil_x_coor = []
+    soil_y_coor = []
+
+    all_coor = list(active_failure_wedge.coordinates)
+    soil = all_coor[all_coor.index((0, 0)):]
+    wall = all_coor[:all_coor.index((0, 0)) + 1]
+
+    soil.append(wall[0])
+
+    for coor in soil:
+        soil_x_coor.append(coor[0])
+        soil_y_coor.append(coor[1])
+
+
+
+    if w_type == 0: plt.plot(soil_x_coor, soil_y_coor, "grey", linewidth=0.5)
+    else: plt.plot(soil_x_coor, soil_y_coor, "brown", linewidth=2.0)
+
+def plot_location(cg, p_active_point):
+    plt.plot([cg[0], p_active_point[0]], [cg[1], p_active_point[1]], "green", linewidth=1, linestyle="dashed")
+    plt.plot([cg[0]], [cg[1]], marker='o', markersize=5, color="brown")
+    plt.plot([p_active_point[0]], [p_active_point[1]], marker='o', markersize=5, color="cyan")
+    plt.plot([p_active_point[0]], [p_active_point[1]], marker='x', markersize=5, color="brown")
+
+
+#Analytical Solver
 def calculate_p_active(weight, cohesion, adhesion, wedge_angle, wall_angle, int_friction, wall_friction):
     """
     Analytical solution to Columb's Force Polygon
@@ -195,13 +223,6 @@ def calculate_p_active(weight, cohesion, adhesion, wedge_angle, wall_angle, int_
 
     return (k + m * math.tan(math.radians(omega))) \
            / (math.cos(math.radians(phi))*math.tan(math.radians(omega))+math.sin(math.radians(phi)))
-
-def format_lines(inputted):
-    input_line_loads = [float(x) for x in inputted.split()]
-    line_loads = []
-    for i in range(0, len(input_line_loads), 2):
-        line_loads.append(tuple([input_line_loads[i], input_line_loads[i + 1]]))
-    return line_loads
 
 def get_inputs():
     """gets input from user"""
@@ -222,39 +243,12 @@ def get_inputs():
 
     return inputs
 
-def plot_wedge(active_failure_wedge, w_type):
-    """
-    plots a wedge object
-    :param active_failure_wedge: wedge object
-    :param w_type: wedge type: 0 if not the failure wedge
-    :return: None
-    """
-
-    soil_x_coor = []
-    soil_y_coor = []
-
-    all_coor = list(active_failure_wedge.get_coordinates())
-    soil = all_coor[all_coor.index((0, 0)):]
-    wall = all_coor[:all_coor.index((0, 0)) + 1]
-
-    soil.append(wall[0])
-
-    for coor in soil:
-        soil_x_coor.append(coor[0])
-        soil_y_coor.append(coor[1])
-
-
-
-    if w_type == 0: plt.plot(soil_x_coor, soil_y_coor, "grey", linewidth=0.5)
-    else: plt.plot(soil_x_coor, soil_y_coor, "brown", linewidth=2.0)
-
-
+#Display
 def line_loads_display(line_loads):
     final = """"""
     for line in line_loads:
         final += (" "*56 + str(line[0]) + " @ " +str(line[1])+"\n")
     return final
-
 def show_data():
     print("""
                 You have input:
@@ -272,7 +266,6 @@ def show_data():
                 11: GWT level (m),                      {:.2f}\n""".format(DATA[0], DATA[1], DATA[2], DATA[3], DATA[4],
                                                                        DATA[5], DATA[6], DATA[7], DATA[8], DATA[9], DATA[10], DATA[11])
             + " " * 16+"""12: Line Loads (kN/m') @ distance (m), \n"""+line_loads_display(DATA[12]))
-
 def solve_and_present():
     solution = main_function(DATA)
     clear()
@@ -388,14 +381,13 @@ def main_function(data, water_density=10):
         if h_crack > 0:
             top_iter_coor = (iter_coor[0], iter_coor[1]+h_crack)
             coordinates = [wall_coordinates[0], init_soil_coor, wall_coordinates[1], iter_coor, top_iter_coor]
-
         else: coordinates = [wall_coordinates[0], wall_coordinates[1], iter_coor]
 
 
         wedge = FailureWedge(density, coordinates, GWT_level, water_density)
         cohesion_force = cohesion * distance(iter_coor, wall_coordinates[1])
         surcharge_force = uniform_surcharge * num * inclined_width
-        p_active_current = calculate_p_active(wedge.get_weight()+surcharge_force, cohesion_force, adhesion_force, failure_angle, wall_angle, int_friction, wall_friction)
+        p_active_current = calculate_p_active(wedge.weight+surcharge_force, cohesion_force, adhesion_force, failure_angle, wall_angle, int_friction, wall_friction)
 
         plot_wedge(wedge, 0)
 
@@ -406,7 +398,10 @@ def main_function(data, water_density=10):
             dista = num * inclined_width
 
 
+    cg_wedge = wedge.get_wedge_cg(uniform_surcharge, dista, init_soil_coor, backfill_angle)
+    p_active_point = get_p_active_point(wall_coordinates,active_failure_angle,cg_wedge)
     plot_wedge(active_failure_wedge, 1)
+
 
     GWT_intersection = intersection_point(wall_coordinates, [(0, GWT_level), (100, GWT_level)])
     if GWT_level != -1: plt.plot([GWT_intersection[0], dista], [GWT_level, GWT_level], "blue", linewidth=1)
@@ -415,6 +410,8 @@ def main_function(data, water_density=10):
                                       [wall_coordinates[0][1], wall_coordinates[0][1]+0.2, top_iter_coor[1]+0.2, top_iter_coor[1]], "purple", linestyle="dotted", linewidth=1.5)
     plt.plot([wall_coordinates[0][0], wall_coordinates[1][0], wall_coordinates[0][0]],
              [wall_coordinates[0][1], wall_coordinates[1][1], 0], "black", linewidth=2.5)
+
+    plot_location(cg_wedge, p_active_point)
 
     plt.axis('off')
 
@@ -442,7 +439,7 @@ def main_function(data, water_density=10):
                 wedge = FailureWedge(density, coordinates, GWT_level, water_density)
                 cohesion_force = cohesion * distance(iter_coor, wall_coordinates[1])
                 surcharge_force = uniform_surcharge * num * inclined_width
-                total = wedge.get_weight() + surcharge_force
+                total = wedge.weight + surcharge_force
 
                 for j in range(i+1):
                     if line_load[j][1] <= num*inclined_width: total += line_load[j][0]
@@ -471,7 +468,7 @@ def initializer():
     clear()
     print("""
            ***********************************************************************************************************
-           ************************** WELCOME TO COLUMB ANALYTICAL 1.2.2 | Abdalla Talaat© ***************************
+           ************************** WELCOME TO COLUMB ANALYTICAL 1.2.4 | Abdalla Talaat© ***************************
            ***********************************************************************************************************
            \n\n
            """)
@@ -493,7 +490,7 @@ def initializer():
             done = True
             solve_and_present()
 
-#main loop
+#Main loop
 while(True):
 
     initializer()
