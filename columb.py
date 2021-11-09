@@ -4,6 +4,7 @@ import os
 
 clear = lambda: os.system('cls')
 
+#Classes
 class FailureWedge:
     def __init__(self, density, coordinates, GWT_level=-1, water_density=10):
         self.coordinates = list(coordinates)
@@ -73,6 +74,7 @@ class FailureWedge:
 
 ###################################################
 
+#Functions
 def area_calculation(list_of_coordinates):
     """takes a list of 2D-coordinates(tuples) and reutrns area"""
     area = 0
@@ -132,6 +134,7 @@ def line_angle(point1, point2):
 
 def calculate_p_active(weight, cohesion, adhesion, wedge_angle, wall_angle, int_friction, wall_friction):
     """
+    Analytical solution to Columb's Force Polygon
     :param weight: weight of wedge
     :param cohesion: cohesion force on soil slip plane
     :param adhesion: adhesion force on interface
@@ -171,11 +174,15 @@ def get_inputs():
     return no_wedges, inclined_width, wall_angle, backfill_angle, vertical_wall_height, density, cohesion, adhesion, int_friction, wall_friction, uniform_surcharge, GWT_level, line_loads
 
 def plot_wedge(active_failure_wedge, w_type):
+    """
+    plots a wedge object
+    :param active_failure_wedge: wedge object
+    :param w_type: wedge type: 0 if not the failure wedge
+    :return: None
+    """
 
     soil_x_coor = []
     soil_y_coor = []
-    wall_x_coor = []
-    wall_y_coor = []
 
     all_coor = list(active_failure_wedge.coordinates)
     soil = all_coor[all_coor.index((0, 0)):]
@@ -187,14 +194,12 @@ def plot_wedge(active_failure_wedge, w_type):
         soil_x_coor.append(coor[0])
         soil_y_coor.append(coor[1])
 
-    for coor in wall:
-        wall_x_coor.append(coor[0])
-        wall_y_coor.append(coor[1])
+
 
     if w_type == 0: plt.plot(soil_x_coor, soil_y_coor, "grey", linewidth=0.5)
     else: plt.plot(soil_x_coor, soil_y_coor, "brown", linewidth=2.0)
 
-def main_function(no_wedges, inclined_width, wall_angle, backfill_angle, vertical_wall_height, density, cohesion, adhesion, int_friction, wall_friction, uniform_surcharge=0, GWT_level=-1, line_load=[(0,0)], water_density=10):
+def main_function(data):
     """
     UNITS IN m and KN
     :param no_wedges: number of wedges
@@ -212,6 +217,23 @@ def main_function(no_wedges, inclined_width, wall_angle, backfill_angle, vertica
     :param line_load: tuple (magnitude, inclined distance)
     :return: Lateral Earth Pressure in KN
     """
+
+    #Data Definitions
+    [no_wedges,
+    inclined_width,
+    wall_angle,
+    backfill_angle,
+    vertical_wall_height,
+    density,
+    cohesion,
+    adhesion,
+    int_friction,
+    wall_friction,
+    uniform_surcharge,
+    GWT_level,
+    line_load,
+    water_density] = data
+
 
     # define wall points coordinates
     wall_coordinates = [(-1*vertical_wall_height/(math.tan(math.radians(wall_angle))), vertical_wall_height), (0,0)]
@@ -351,8 +373,7 @@ def show_data():
             + " " * 16+"""12: Line Loads (kN/m') @ distance (m), \n"""+line_loads_display(DATA[12]))
 
 def solve_and_present():
-    solution = main_function(DATA[0], DATA[1], DATA[2], DATA[3], DATA[4], DATA[5],
-                             DATA[6], DATA[7], DATA[8], DATA[9], DATA[10], DATA[11], DATA[12])
+    solution = main_function(DATA)
     clear()
     if DATA[12][0][0] == 0 and len(DATA[12])  == 1:
         print("""
