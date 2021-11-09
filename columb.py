@@ -5,7 +5,7 @@ import os
 clear = lambda: os.system('cls')
 
 #Global Variables
-DATA = [50, 0.1, 75, 12, 20, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
+DATA = [50, 0.5, 75, 12, 10, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
 INPUT_MSGS = [("int", "\nselect the number of wedges: "),
               ("float", "\nselect the desired inclined step width (m): " ),
               ("float", "\nselect the desired wall angle (deg): " ),
@@ -203,13 +203,13 @@ def plot_wedge(active_failure_wedge, w_type):
 
     if w_type == 0: plt.plot(soil_x_coor, soil_y_coor, "grey", linewidth=0.5)
     else: plt.plot(soil_x_coor, soil_y_coor, "brown", linewidth=2.0)
-def plot_location(cg, p_active_point):
+def plot_location(cg, p_active_point, p_active):
     plt.plot([cg[0], p_active_point[0]], [cg[1], p_active_point[1]], "green", linewidth=1, linestyle="dashed")
     plt.plot([cg[0]], [cg[1]], marker='o', markersize=5, color="brown")
     plt.plot([p_active_point[0]], [p_active_point[1]], marker='o', markersize=7, color="deepskyblue")
     plt.plot([p_active_point[0]], [p_active_point[1]], marker='x', markersize=7, color="brown")
 
-    plt.text(p_active_point[0] - 0.5, p_active_point[1], "({:.2f}, {:.2f})".format(p_active_point[0], p_active_point[1]), ha='right', va='center')
+    plt.text(p_active_point[0] - 0.5, p_active_point[1], "{:.2f} @ ({:.2f}, {:.2f})".format(p_active, p_active_point[0], p_active_point[1]), ha='right', va='center')
 
 def plot_lines(line_loads, wall_coordinates, friction_angle, failure_angle, backfill_angle, dista, init_soil_coor, h_cr):
 
@@ -231,7 +231,7 @@ def plot_lines(line_loads, wall_coordinates, friction_angle, failure_angle, back
         plt.plot([point_of_delta_p[0]], [point_of_delta_p[1]], marker='o', markersize=5, color="deepskyblue")
         plt.plot([point_of_delta_p[0]], [point_of_delta_p[1]], marker='x', markersize=5, color="brown")
 
-        plt.text(point_of_delta_p[0]-0.5, point_of_delta_p[1], "({:.2f}, {:.2f})".format(point_of_delta_p[0], point_of_delta_p[1]), ha='right', va='center')
+        plt.text(point_of_delta_p[0]-0.5, point_of_delta_p[1], str(line[0])+" @ ({:.2f}, {:.2f})".format(point_of_delta_p[0], point_of_delta_p[1]), ha='right', va='center')
 
 
 
@@ -303,15 +303,11 @@ def solve_and_present():
     solution = main_function(DATA)
     clear()
     warning = """"""
+    if solution[0][1] > 90:
+        warning += "\n[WARNING] FAILURE ANGLE TOO LARGE\n"
     if solution[0][0] == DATA[0]*DATA[1]:
-        warning = warning + "\n" """
-        *********************************************************
-        ************************ WARNING ************************
-        *********************************************************
-        THE ESTIMATED ACTIVE FAILURE WEDGE IS THE LAST WEDGE! 
-        YOU SHOULD USE MORE WEDGES!
-        *********************************************************
-        """ + "\n"
+        warning = warning + "\n" """\n[WARNING] ESTIMATED ACTIVE FAILURE WEDGE IS THE LAST WEDGE! \n"""+ 10*" "+ """YOU SHOULD USE MORE WEDGES!\n"""
+
 
     if DATA[12][0][0] == 0 and len(DATA[12])  == 1:
         return warning + """
@@ -420,6 +416,7 @@ def main_function(data, water_density=10):
                      init_soil_coor[1]+ num*inclined_width*math.sin(math.radians(backfill_angle)))
 
         failure_angle = line_angle(wall_coordinates[1], iter_coor)
+        if failure_angle < 0: failure_angle = failure_angle + 180
 
         #determine coordinates
         if h_crack > 0:
@@ -458,7 +455,9 @@ def main_function(data, water_density=10):
     plt.plot([wall_coordinates[0][0], wall_coordinates[1][0], wall_coordinates[0][0]],
              [wall_coordinates[0][1], wall_coordinates[1][1], 0], "black", linewidth=2.5)
 
-    plot_location(cg_wedge, p_active_point)
+    plot_location(cg_wedge, p_active_point, p_active)
+    plt.text(0, -0.25, "(0, 0)", ha='center', va='top')
+
 
 
     result = [[dista, active_failure_angle], p_active]
@@ -473,6 +472,7 @@ def main_function(data, water_density=10):
                              init_soil_coor[1] + num * inclined_width * math.sin(math.radians(backfill_angle)))
 
                 failure_angle = line_angle(wall_coordinates[1], iter_coor)
+                if failure_angle < 0: failure_angle = failure_angle + 180
 
                 # determine coordinates
                 if h_crack > 0:
