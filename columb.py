@@ -5,7 +5,7 @@ import os
 clear = lambda: os.system('cls')
 
 #Global Variables
-DATA = [200, 0.5, 75, 12, 20, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
+DATA = [50, 0.1, 75, 12, 20, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
 INPUT_MSGS = [("int", "\nselect the number of wedges: "),
               ("float", "\nselect the desired inclined step width (m): " ),
               ("float", "\nselect the desired wall angle (deg): " ),
@@ -299,10 +299,22 @@ def show_data():
            + " " * 16+"""12: Line Loads (kN/m') @ distance (m), \n"""+line_loads_display(DATA[12])
 
 def solve_and_present():
+    global DATA
     solution = main_function(DATA)
     clear()
+    warning = """"""
+    if solution[0][0] == DATA[0]*DATA[1]:
+        warning = warning + "\n" """
+        *********************************************************
+        ************************ WARNING ************************
+        *********************************************************
+        THE ESTIMATED ACTIVE FAILURE WEDGE IS THE LAST WEDGE! 
+        YOU SHOULD USE MORE WEDGES!
+        *********************************************************
+        """ + "\n"
+
     if DATA[12][0][0] == 0 and len(DATA[12])  == 1:
-        return """
+        return warning + """
         *********************************************************
         ************************ SOLUTION ***********************
         *********************************************************
@@ -321,7 +333,7 @@ def solve_and_present():
             lls += " "*49+ "{:.3f}".format(sol)+"\n"
 
 
-        return """
+        return warning + """
         *********************************************************
         ************************ SOLUTION ***********************
         *********************************************************
@@ -509,7 +521,7 @@ def initializer():
     clear()
     print("""
            ***********************************************************************************************************
-           ************************** WELCOME TO COLUMB ANALYTICAL 1.2.4 | Abdalla Talaat© ***************************
+           ************************** WELCOME TO COLUMB ANALYTICAL 1.3.0 | Abdalla Talaat© ***************************
            ***********************************************************************************************************
            \n\n
            """)
@@ -587,18 +599,17 @@ while(True):
             plt.close()
 
             plt.figure(figsize=(15, 7), tight_layout=True)
-            (ax1, ax2) = plt.subplots(1, 2)
-
 
             plt.axis('off')
-
+            plt.gca().set_aspect('equal', adjustable='box')
             txt = solve_and_present()
             print(txt)
 
-            ax2.text(DATA[0]*DATA[1]/math.cos(math.radians(DATA[3])), DATA[4] + DATA[0]*DATA[1]*math.sin(math.radians(DATA[3])), txt, ha='left', va='top', fontsize='x-small')
+            plt.figure(figsize=(4, 5.2), tight_layout=True)
+            plt.text(0, 0, txt, ha='right', va='baseline', fontsize='x-small')
+            plt.axis('off')
 
 
-            plt.gca().set_aspect('equal', adjustable='box')
             plt.show()
         else:
             clear()
