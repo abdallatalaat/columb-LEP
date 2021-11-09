@@ -5,7 +5,7 @@ import os
 clear = lambda: os.system('cls')
 
 #Global Variables
-DATA = [50, 0.5, 75, 12, 10, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
+DATA = [200, 0.5, 75, 12, 20, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
 INPUT_MSGS = [("int", "\nselect the number of wedges: "),
               ("float", "\nselect the desired inclined step width (m): " ),
               ("float", "\nselect the desired wall angle (deg): " ),
@@ -169,6 +169,10 @@ def format_lines(inputted):
     for i in range(0, len(input_line_loads), 2):
         line_loads.append(tuple([input_line_loads[i], input_line_loads[i + 1]]))
     return line_loads
+def get_line_intersection_with_backfill(wall_coordinates, angle, point):
+    arb_point = (point[0] - 1000 * math.cos(math.radians(angle)), point[1] - 1000 * math.sin(math.radians(angle)))
+    return intersection_point(wall_coordinates, [point,arb_point])
+
 def get_p_active_point(wall_coordinates, angle, cg):
     arb_point = (cg[0] - 1000 * math.cos(math.radians(angle)), cg[1] - 1000 * math.sin(math.radians(angle)))
     return intersection_point(wall_coordinates, [cg,arb_point])
@@ -199,12 +203,39 @@ def plot_wedge(active_failure_wedge, w_type):
 
     if w_type == 0: plt.plot(soil_x_coor, soil_y_coor, "grey", linewidth=0.5)
     else: plt.plot(soil_x_coor, soil_y_coor, "brown", linewidth=2.0)
-
 def plot_location(cg, p_active_point):
     plt.plot([cg[0], p_active_point[0]], [cg[1], p_active_point[1]], "green", linewidth=1, linestyle="dashed")
     plt.plot([cg[0]], [cg[1]], marker='o', markersize=5, color="brown")
-    plt.plot([p_active_point[0]], [p_active_point[1]], marker='o', markersize=5, color="cyan")
-    plt.plot([p_active_point[0]], [p_active_point[1]], marker='x', markersize=5, color="brown")
+    plt.plot([p_active_point[0]], [p_active_point[1]], marker='o', markersize=7, color="deepskyblue")
+    plt.plot([p_active_point[0]], [p_active_point[1]], marker='x', markersize=7, color="brown")
+
+    plt.text(p_active_point[0] - 0.5, p_active_point[1], "({:.2f}, {:.2f})".format(p_active_point[0], p_active_point[1]), ha='right', va='center')
+
+def plot_lines(line_loads, wall_coordinates, friction_angle, failure_angle, backfill_angle, dista, init_soil_coor, h_cr):
+
+    for line in line_loads:
+        line_coor = (init_soil_coor[0] + line[1] * math.cos(math.radians(backfill_angle)), h_cr + init_soil_coor[1] + line[1] * math.sin(math.radians(backfill_angle)))
+
+        beta_intersection= [0, 0]
+        if line[1] * math.cos(math.radians(backfill_angle)) <= dista:
+            beta_intersection = get_line_intersection_with_backfill(wall_coordinates,failure_angle,line_coor)
+
+        plt.plot([line_coor[0], beta_intersection[0]], [line_coor[1], beta_intersection[1]], "purple", linewidth=0.75, linestyle="dashed")
+
+        phi_intersection = get_line_intersection_with_backfill(wall_coordinates,friction_angle,line_coor)
+        plt.plot([line_coor[0], phi_intersection[0]], [line_coor[1], phi_intersection[1]], "purple", linewidth=0.75, linestyle="dashed")
+
+
+        point_of_delta_p = ((beta_intersection[0] + phi_intersection[0]*2)/3, (beta_intersection[1] + phi_intersection[1]*2)/3)
+
+        plt.plot([point_of_delta_p[0]], [point_of_delta_p[1]], marker='o', markersize=5, color="deepskyblue")
+        plt.plot([point_of_delta_p[0]], [point_of_delta_p[1]], marker='x', markersize=5, color="brown")
+
+        plt.text(point_of_delta_p[0]-0.5, point_of_delta_p[1], "({:.2f}, {:.2f})".format(point_of_delta_p[0], point_of_delta_p[1]), ha='right', va='center')
+
+
+
+
 
 
 #Analytical Solver
@@ -250,7 +281,7 @@ def line_loads_display(line_loads):
         final += (" "*56 + str(line[0]) + " @ " +str(line[1])+"\n")
     return final
 def show_data():
-    print("""
+    return """
                 You have input:
                 00: number of wedges,                   {:.0f}
                 01: inclined step width (m),            {:.2f}
@@ -264,13 +295,14 @@ def show_data():
                 09: wall friction angle (deg),          {:.2f}
                 10: uniform surcharge (kPa),            {:.2f}
                 11: GWT level (m),                      {:.2f}\n""".format(DATA[0], DATA[1], DATA[2], DATA[3], DATA[4],
-                                                                       DATA[5], DATA[6], DATA[7], DATA[8], DATA[9], DATA[10], DATA[11])
-            + " " * 16+"""12: Line Loads (kN/m') @ distance (m), \n"""+line_loads_display(DATA[12]))
+                                                                       DATA[5], DATA[6], DATA[7], DATA[8], DATA[9], DATA[10], DATA[11]) \
+           + " " * 16+"""12: Line Loads (kN/m') @ distance (m), \n"""+line_loads_display(DATA[12])
+
 def solve_and_present():
     solution = main_function(DATA)
     clear()
     if DATA[12][0][0] == 0 and len(DATA[12])  == 1:
-        print("""
+        return """
         *********************************************************
         ************************ SOLUTION ***********************
         *********************************************************
@@ -280,7 +312,7 @@ def solve_and_present():
         ACTIVE EARTH PRESSURE:           {:.3f} kN/m'
         
         *********************************************************
-        """.format(solution[0][0], solution[0][1], solution[1]) + "\n" * 4)
+        """.format(solution[0][0], solution[0][1], solution[1]) + "\n" * 4 + show_data()
     else:
         lls = ""
         for i in range(len(solution[2:])):
@@ -289,7 +321,7 @@ def solve_and_present():
             lls += " "*49+ "{:.3f}".format(sol)+"\n"
 
 
-        print("""
+        return """
         *********************************************************
         ************************ SOLUTION ***********************
         *********************************************************
@@ -300,9 +332,9 @@ def solve_and_present():
         
         DELTA ACTIVE PRESSURES:                  kN/m'\n""".format(solution[0][0], solution[0][1], solution[1]) + lls + """
         
-        *********************************************************""" + "\n" * 4)
+        *********************************************************""" + "\n" * 4 + show_data()
 
-    show_data()
+
 
 
 ###################################################
@@ -406,14 +438,16 @@ def main_function(data, water_density=10):
     GWT_intersection = intersection_point(wall_coordinates, [(0, GWT_level), (100, GWT_level)])
     if GWT_level != -1: plt.plot([GWT_intersection[0], dista], [GWT_level, GWT_level], "blue", linewidth=1)
 
-    if surcharge_force != 0: plt.plot([wall_coordinates[0][0], wall_coordinates[0][0], top_iter_coor[0], top_iter_coor[0]],
-                                      [wall_coordinates[0][1], wall_coordinates[0][1]+0.2, top_iter_coor[1]+0.2, top_iter_coor[1]], "purple", linestyle="dotted", linewidth=1.5)
+    if surcharge_force != 0:
+        plt.plot([wall_coordinates[0][0], wall_coordinates[0][0], top_iter_coor[0], top_iter_coor[0]], [wall_coordinates[0][1], wall_coordinates[0][1]+0.2, top_iter_coor[1]+0.2, top_iter_coor[1]], "purple", linestyle="dotted", linewidth=1.5)
+        plt.text(init_soil_coor[0]+ dista*math.cos(math.radians(backfill_angle)), init_soil_coor[1]+ dista*math.sin(math.radians(backfill_angle)) + h_crack + 1, str(uniform_surcharge) + " kN/m2", ha='left')
+
+
     plt.plot([wall_coordinates[0][0], wall_coordinates[1][0], wall_coordinates[0][0]],
              [wall_coordinates[0][1], wall_coordinates[1][1], 0], "black", linewidth=2.5)
 
     plot_location(cg_wedge, p_active_point)
 
-    plt.axis('off')
 
     result = [[dista, active_failure_angle], p_active]
 
@@ -454,10 +488,17 @@ def main_function(data, water_density=10):
 
             point_load_coor = (init_soil_coor[0] + line_load[i][1] * math.cos(math.radians(backfill_angle)),
                              init_soil_coor[1] + line_load[i][1] * math.sin(math.radians(backfill_angle))+h_crack)
+
+            plt.text(point_load_coor[0], point_load_coor[1]+1, str(line_load[i][0])+" kN/m'",  ha='center')
+
             plt.plot([point_load_coor[0], point_load_coor[0]],[point_load_coor[1]+1,point_load_coor[1]], "green", linestyle="dotted")
 
             result.append(delta)
+
+        plot_lines(line_load, wall_coordinates, int_friction, active_failure_angle, backfill_angle, dista, init_soil_coor, h_crack)
+
         return result
+
 
 ###################################################
 
@@ -473,7 +514,7 @@ def initializer():
            \n\n
            """)
 
-    show_data()
+    print(show_data())
 
     a = input("input (n) to add new data. input (q) to quit. Press Enter to solve using existing data.  ")
     done = False
@@ -488,7 +529,7 @@ def initializer():
         elif a == "q": quit()
         else:
             done = True
-            solve_and_present()
+            print(solve_and_present())
 
 #Main loop
 while(True):
@@ -506,7 +547,7 @@ while(True):
             quit()
         elif q=="e":
             clear()
-            show_data()
+            print(show_data())
             try:
                 edi = int(input("""
                 Choose what to edit:
@@ -543,10 +584,22 @@ while(True):
 
 
         elif q=="p":
-            plt.clf()
-            solve_and_present()
+            plt.close()
+
+            plt.figure(figsize=(15, 7), tight_layout=True)
+            (ax1, ax2) = plt.subplots(1, 2)
+
+
+            plt.axis('off')
+
+            txt = solve_and_present()
+            print(txt)
+
+            ax2.text(DATA[0]*DATA[1]/math.cos(math.radians(DATA[3])), DATA[4] + DATA[0]*DATA[1]*math.sin(math.radians(DATA[3])), txt, ha='left', va='top', fontsize='x-small')
+
+
             plt.gca().set_aspect('equal', adjustable='box')
             plt.show()
         else:
             clear()
-            show_data()
+            print(show_data())
