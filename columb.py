@@ -5,19 +5,18 @@ import os
 clear = lambda: os.system('cls')
 
 DATA = [50, 0.5, 75, 12, 10, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
-INPUT_MSGS = [("int", "\nselect the number of wedges:                                         "),
-              ("float", "\nselect the desired inclined step width (m):                        " ),
-              ("float", "\nselect the desired wall angle (deg):                               " ),
-              ("float", "\nselect the desired backfill angle (deg):                           " ),
-              ("float", "\nselect the desired vertical wall height (m):                       " ),
-              ("float", "\nselect the desired soil saturated density (kN/m3):                 " ),
-              ("float", "\nselect the desired cohesion (shear param) (kPa):                   " ),
-              ("float", "\nselect the desired adhesion (interface param) (kPa):               " ),
-              ("float", "\nselect the desired internal friction angle (shear param) (deg):    " ),
-              ("float", "\nselect the desired wall friction angle (interface param) (deg):    " ),
-              ("float", "\nselect the uniform surcharge value (0 if no surcharge) (kPa):      " ),
-              ("float", "\nselect the desired GWT level from base (-1 if no GWT) (m):         " ),
-              ("float", "\nselect the desired GWT level from base (-1 if no GWT) (m):         " ),
+INPUT_MSGS = [("int", "\nselect the number of wedges: "),
+              ("float", "\nselect the desired inclined step width (m): " ),
+              ("float", "\nselect the desired wall angle (deg): " ),
+              ("float", "\nselect the desired backfill angle (deg): " ),
+              ("float", "\nselect the desired vertical wall height (m): " ),
+              ("float", "\nselect the desired soil saturated density (kN/m3): " ),
+              ("float", "\nselect the desired cohesion (shear param) (kPa): " ),
+              ("float", "\nselect the desired adhesion (interface param) (kPa): " ),
+              ("float", "\nselect the desired internal friction angle (shear param) (deg): " ),
+              ("float", "\nselect the desired wall friction angle (interface param) (deg): " ),
+              ("float", "\nselect the uniform surcharge value (0 if no surcharge) (kPa): " ),
+              ("float", "\nselect the desired GWT level from base (-1 if no GWT) (m): " ),
               ("line", "\nselect consecutively the desired line load(s) and inclined distance(s)\n"
                         "from R.Wall top separated by a spaces (0 0 for no line load) (kN/m'): ")
               ]
@@ -197,32 +196,31 @@ def calculate_p_active(weight, cohesion, adhesion, wedge_angle, wall_angle, int_
     return (k + m * math.tan(math.radians(omega))) \
            / (math.cos(math.radians(phi))*math.tan(math.radians(omega))+math.sin(math.radians(phi)))
 
+def format_lines(inputted):
+    input_line_loads = [float(x) for x in inputted.split()]
+    line_loads = []
+    for i in range(0, len(input_line_loads), 2):
+        line_loads.append(tuple([input_line_loads[i], input_line_loads[i + 1]]))
+    return line_loads
+
 def get_inputs():
     """gets input from user"""
+    global INPUT_MSGS
+
     inputs = []
-    no_wedges = int(input("\nselect the number of wedges: "))
-    inclined_width = float(input("\nselect the desired inclined step width (m): "))
-    print("\nYour calculations will cover {:.4f} meters\n\n".format(inclined_width * no_wedges))
-    wall_angle = float(input("\nselect the desired wall angle (deg): "))
-    backfill_angle = float(input("\nselect the desired backfill angle (deg): "))
-    vertical_wall_height = float(input("\nselect the desired vertical wall height (m): "))
-    density = float(input("\nselect the desired soil saturated density (kN/m3): "))
-    cohesion = float(input("\nselect the desired cohesion (shear param) (kPa): "))
-    adhesion = float(input("\nselect the desired adhesion (interface param) (kPa): "))
-    int_friction = float(input("\nselect the desired internal friction angle (shear param) (deg): "))
-    wall_friction = float(input("\nselect the desired wall friction angle (interface param) (deg): "))
-    uniform_surcharge = float(input("\nselect the uniform surcharge value (0 if no surcharge) (kPa): "))
-    GWT_level = float(input("\nselect the desired GWT level (-1 if no GWT) (measured from R.Wall base) (m): "))
+    for msg in INPUT_MSGS:
+        good_input = False
+        while not good_input:
+            try:
+                inputted = input(msg[1])
+                if inputted == "q": quit()
+                elif msg[0] == "int": inputs.append(int(inputted))
+                elif msg[0] == "float": inputs.append(float(input(inputted)))
+                elif msg[0] == "line": inputs.append(format_lines(inputted))
+                good_input = True
+            except: pass
 
-    input_line_loads = [float(x) for x in input("\nselect consecutively the desired line load(s) and inclined distance(s)\n"
-                                               "from R.Wall top separated by a spaces (0 0 for no line load) (kN/m'): ").split()]
-    line_loads = []
-    for i in range(0,len(input_line_loads),2):
-        line_loads.append(tuple([input_line_loads[i], input_line_loads[i + 1]]))
-
-
-
-    return no_wedges, inclined_width, wall_angle, backfill_angle, vertical_wall_height, density, cohesion, adhesion, int_friction, wall_friction, uniform_surcharge, GWT_level, line_loads
+    return inputs
 
 def plot_wedge(active_failure_wedge, w_type):
     """
@@ -478,9 +476,9 @@ def initializer():
            \n\n
            """)
 
-    print(show_data())
+    show_data()
 
-    a = input("input (n) to add new data. press Enter to solve using existing data.  ")
+    a = input("input (n) to add new data. input (q) to quit. Press Enter to solve using existing data.  ")
     done = False
     while not done:
         if a == "n":
@@ -488,9 +486,12 @@ def initializer():
                 DATA = list(get_inputs())
                 done = True
             except:
-                print("BAD INPUT")
+                quit()
 
-        else: solve_and_present()
+        elif a == "q": quit()
+        else:
+            done = True
+            solve_and_present()
 
 #main loop
 while(True):
