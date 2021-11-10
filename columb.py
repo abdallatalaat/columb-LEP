@@ -211,9 +211,13 @@ def plot_location(cg, p_active_point, p_active):
 
     plt.text(p_active_point[0] - 0.5, p_active_point[1], "{:.2f} @ ({:.2f}, {:.2f})".format(p_active, p_active_point[0], p_active_point[1]), ha='right', va='center')
 
-def plot_lines(line_loads, wall_coordinates, friction_angle, failure_angle, backfill_angle, dista, init_soil_coor, h_cr):
+def plot_lines(line_loads, wall_coordinates, friction_angle, failure_angle, backfill_angle, dista, init_soil_coor, h_cr, result):
 
+    it = 0
+    p_lines = [(x) for x in result[2:]]
+    p_lines.insert(0,0)
     for line in line_loads:
+        it+=1
         line_coor = (init_soil_coor[0] + line[1] * math.cos(math.radians(backfill_angle)), h_cr + init_soil_coor[1] + line[1] * math.sin(math.radians(backfill_angle)))
 
         beta_intersection= [0, 0]
@@ -231,7 +235,7 @@ def plot_lines(line_loads, wall_coordinates, friction_angle, failure_angle, back
         plt.plot([point_of_delta_p[0]], [point_of_delta_p[1]], marker='o', markersize=5, color="deepskyblue")
         plt.plot([point_of_delta_p[0]], [point_of_delta_p[1]], marker='x', markersize=5, color="brown")
 
-        plt.text(point_of_delta_p[0]-0.5, point_of_delta_p[1], str(line[0])+" @ ({:.2f}, {:.2f})".format(point_of_delta_p[0], point_of_delta_p[1]), ha='right', va='center')
+        plt.text(point_of_delta_p[0]-0.5, point_of_delta_p[1], "{:.2f}".format(p_lines[it]-p_lines[it-1])+" @ ({:.2f}, {:.2f})".format(point_of_delta_p[0], point_of_delta_p[1]), ha='right', va='center')
 
 
 
@@ -507,7 +511,7 @@ def main_function(data, water_density=10):
 
             result.append(delta)
 
-        plot_lines(line_load, wall_coordinates, int_friction, active_failure_angle, backfill_angle, dista, init_soil_coor, h_crack)
+        plot_lines(line_load, wall_coordinates, int_friction, active_failure_angle, backfill_angle, dista, init_soil_coor, h_crack, result)
 
         return result
 
@@ -520,9 +524,9 @@ def initializer():
 
     clear()
     print("""
-           ***********************************************************************************************************
-           ************************** WELCOME TO COLUMB ANALYTICAL 1.3.0 | Abdalla Talaat© ***************************
-           ***********************************************************************************************************
+***********************************************************************************************************
+************************** WELCOME TO COLUMB ANALYTICAL 1.3.1 | Abdalla Talaat\xa9 ***************************
+***********************************************************************************************************
            \n\n
            """)
 
