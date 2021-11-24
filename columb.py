@@ -407,6 +407,8 @@ def main_function(data, water_density=10):
         print("h_crack is larger than the vertical wall height! recheck your input..")
         return -1
 
+    if h_crack < 0: h_crack = 0
+
     #failure angle
     init_soil_height = vertical_wall_height - h_crack
     init_soil_coor = (-1*init_soil_height/(math.tan(math.radians(wall_angle))), init_soil_height)
@@ -422,10 +424,10 @@ def main_function(data, water_density=10):
         failure_angle = line_angle(wall_coordinates[1], iter_coor)
         if failure_angle < 0: failure_angle = failure_angle + 180
 
+        top_iter_coor = (iter_coor[0], iter_coor[1] + h_crack)
+
         #determine coordinates
-        if h_crack > 0:
-            top_iter_coor = (iter_coor[0], iter_coor[1]+h_crack)
-            coordinates = [wall_coordinates[0], init_soil_coor, wall_coordinates[1], iter_coor, top_iter_coor]
+        if h_crack > 0: coordinates = [wall_coordinates[0], init_soil_coor, wall_coordinates[1], iter_coor, top_iter_coor]
         else: coordinates = [wall_coordinates[0], wall_coordinates[1], iter_coor]
 
 
@@ -443,7 +445,7 @@ def main_function(data, water_density=10):
             dista = num * inclined_width
 
 
-    cg_wedge = wedge.get_wedge_cg(uniform_surcharge, dista, init_soil_coor, backfill_angle)
+    cg_wedge = active_failure_wedge.get_wedge_cg(uniform_surcharge, dista, init_soil_coor, backfill_angle)
     p_active_point = get_p_active_point(wall_coordinates,active_failure_angle,cg_wedge)
     plot_wedge(active_failure_wedge, 1)
 
@@ -461,8 +463,6 @@ def main_function(data, water_density=10):
 
     plot_location(cg_wedge, p_active_point, p_active)
     plt.text(0, -0.25, "(0, 0)", ha='center', va='top')
-
-
 
     result = [[dista, active_failure_angle], p_active]
 
@@ -525,7 +525,7 @@ def initializer():
     clear()
     print("""
 ***********************************************************************************************************
-************************** WELCOME TO COLUMB ANALYTICAL 1.3.1 | Abdalla Talaat\xa9 ***************************
+************************** WELCOME TO COLUMB ANALYTICAL 1.3.2 | Abdalla Talaat\xa9 ***************************
 ***********************************************************************************************************
            \n\n
            """)
