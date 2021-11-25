@@ -55,6 +55,8 @@ class FailureWedge:
         if self.is_homogenous(GWT_level):
             self.set_unsat_coordinates(self.coordinates)
             self.set_sat_coordinates([])
+            return
+
 
         intersection_points_with_GWT = []
         line2 = [(0, GWT_level), (1, GWT_level)]
@@ -82,6 +84,8 @@ class FailureWedge:
 
         self.set_unsat_coordinates(self.coordinates[:indices_of_intersection[0]+1] + self.coordinates[indices_of_intersection[1]:])
         self.set_sat_coordinates(self.coordinates[indices_of_intersection[0]:indices_of_intersection[1]+1])
+
+
     def get_wedge_cg(self, uniform_surcharge, dista, init_soil_coor, backfill_angle):
 
         surch_coor = (init_soil_coor[0]+ dista*math.cos(math.radians(backfill_angle))/2,
@@ -90,9 +94,12 @@ class FailureWedge:
 
         sat_cg = get_cg(self.sat_coordinates)
         unsat_cg = get_cg(self.unsat_coordinates)
+        sub_density = self.density-self.water_density
 
-        return ((surch_coor[0]*sur_line + unsat_cg[0]*self.density + sat_cg[0]*(self.density-self.water_density))/(sur_line+2*self.density-self.water_density),
-                (surch_coor[1]*sur_line + unsat_cg[1]*self.density + sat_cg[1]*(self.density-self.water_density))/(sur_line+2*self.density-self.water_density))
+        if len(self.sat_coordinates) == 0: sub_density = 0
+
+        return ((surch_coor[0]*sur_line + unsat_cg[0]*self.density + sat_cg[0]*(sub_density))/(sur_line+self.density+sub_density),
+                (surch_coor[1]*sur_line + unsat_cg[1]*self.density + sat_cg[1]*(sub_density))/(sur_line+self.density+sub_density))
 
     def calculate_weight(self):
         return area_calculation(self.sat_coordinates) * (self.density - self.water_density) + area_calculation(self.unsat_coordinates) * self.density
@@ -112,7 +119,7 @@ def area_calculation(list_of_coordinates):
 def get_cg(list_of_coordinates):
     """gets CG of list of coordinates"""
     l = len(list_of_coordinates)
-    if l == 0 : return 0
+    if l == 0 : return [0, 0]
     s = [0.0, 0.0]
     for coor in list_of_coordinates:
         s[0] += coor[0]
@@ -190,19 +197,16 @@ def plot_wedge(active_failure_wedge, w_type):
     soil_y_coor = []
 
     all_coor = list(active_failure_wedge.coordinates)
-    soil = all_coor[all_coor.index((0, 0)):]
-    wall = all_coor[:all_coor.index((0, 0)) + 1]
-
-    soil.append(wall[0])
+    soil = all_coor
 
     for coor in soil:
         soil_x_coor.append(coor[0])
         soil_y_coor.append(coor[1])
 
-
-
     if w_type == 0: plt.plot(soil_x_coor, soil_y_coor, "grey", linewidth=0.5)
     else: plt.plot(soil_x_coor, soil_y_coor, "brown", linewidth=2.0)
+
+
 def plot_location(cg, p_active_point, p_active):
     plt.plot([cg[0], p_active_point[0]], [cg[1], p_active_point[1]], "green", linewidth=1, linestyle="dashed")
     plt.plot([cg[0]], [cg[1]], marker='o', markersize=5, color="brown")
@@ -271,7 +275,7 @@ def get_inputs():
                 inputted = input(msg[1])
                 if inputted == "q": quit()
                 elif msg[0] == "int": inputs.append(int(inputted))
-                elif msg[0] == "float": inputs.append(float(input(inputted)))
+                elif msg[0] == "float": inputs.append(float(inputted))
                 elif msg[0] == "line": inputs.append(format_lines(inputted))
                 good_input = True
             except: pass
@@ -409,9 +413,10 @@ def main_function(data, water_density=10):
 
     if h_crack < 0: h_crack = 0
 
-    #failure angle
-    init_soil_height = vertical_wall_height - h_crack
-    init_soil_coor = (-1*init_soil_height/(math.tan(math.radians(wall_angle))), init_soil_height)
+    #init coordinates
+    init_inclination = h_crack*(math.sin(math.radians(90-wall_angle))/math.sin(math.radians(wall_angle + backfill_angle)))
+    init_soil_coor = (wall_coordinates[0][0] + init_inclination * math.cos(math.radians(backfill_angle)),
+                      wall_coordinates[0][1] + init_inclination * math.sin(math.radians(backfill_angle))-h_crack)
 
     p_active = float('-inf')
     active_failure_wedge = None
@@ -447,7 +452,13 @@ def main_function(data, water_density=10):
 
     cg_wedge = active_failure_wedge.get_wedge_cg(uniform_surcharge, dista, init_soil_coor, backfill_angle)
     p_active_point = get_p_active_point(wall_coordinates,active_failure_angle,cg_wedge)
+
+    plt.plot([init_soil_coor[0], iter_coor[0]], [init_soil_coor[1], iter_coor[1]], "grey", linewidth=0.75, linestyle="dashed")
+    plt.plot([wall_coordinates[0][0], iter_coor[0]], [wall_coordinates[0][1], iter_coor[1]+h_crack], "saddlebrown", linewidth=2)
+
     plot_wedge(active_failure_wedge, 1)
+
+
 
 
     GWT_intersection = intersection_point(wall_coordinates, [(0, GWT_level), (100, GWT_level)])
@@ -525,7 +536,7 @@ def initializer():
     clear()
     print("""
 ***********************************************************************************************************
-************************** WELCOME TO COLUMB ANALYTICAL 1.3.2 | Abdalla Talaat\xa9 ***************************
+************************** WELCOME TO COLUMB ANALYTICAL 1.3.3 | Abdalla Talaat\xa9 ***************************
 ***********************************************************************************************************
            \n\n
            """)
