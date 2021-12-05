@@ -2,6 +2,9 @@ import math
 import matplotlib.pyplot as plt
 import os
 
+cmd = 'mode 110,50'
+os.system(cmd)
+
 clear = lambda: os.system('cls')
 
 #Global Variables
