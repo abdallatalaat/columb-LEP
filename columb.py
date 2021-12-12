@@ -646,6 +646,61 @@ while(True):
 
             plt.show()
 
+        elif q=="a":
+            images = []
+            fig = plt.figure()
+            plt.axis('off')
+            plt.gca().set_aspect('equal', adjustable='box')
+            fig.set_size_inches(15,7)
+
+
+            r = 0
+
+            inc_l = 50
+
+            for i in range(4,58,1):
+                print("generating frames...")
+                DATA[1] = inc_l/i
+                DATA[0] = i
+
+                plt.figure(figsize=(15, 7), tight_layout=True)
+
+                plt.axis('off')
+                plt.gca().set_aspect('equal', adjustable='box')
+
+                solve_and_present()
+                plt.savefig("anim_loop/"+str(r)+".png")
+                r+=1
+                plt.close()
+            print("generated.")
+
+            myimages = []
+
+            for k in range(0, r):
+                fname = "anim_loop/"+str(k)+".png"
+                # read in pictures
+                img = mgimg.imread(fname)
+                imgplot = plt.imshow(img)
+
+                myimages.append([imgplot])
+
+
+            my_anim = animation.ArtistAnimation(fig, myimages, interval=84)
+
+            my_anim.save("animation.gif")
+        elif q=="dd":
+            rs = []
+            for i in range(2, 40, 1):
+                print("generating frames...")
+                DATA[1] = 20 / i
+                DATA[0] = 20
+                sol = main_function(DATA)
+                rs.append([sol[0][1],sol[1]])
+            print("DONE\n\n")
+            for i in range(len(rs)): print(20.0/(i+2), rs[i])
+
+
+
         else:
             clear()
             print(show_data())
