@@ -1,4 +1,4 @@
-# columb-analytical
+# columb-LEP-solver
 analytical solver for Columb's LEP
 
 ## Click on the image to see the tutorial video
