@@ -1,6 +1,9 @@
 import math
 import matplotlib.pyplot as plt
+from matplotlib import animation
 import os
+import matplotlib.image as mgimg
+
 
 cmd = 'mode 110,50'
 os.system(cmd)
@@ -45,8 +48,8 @@ class FailureWedge:
     def gen_lines(self):
         lines = []  # list of tuples. each tuple has coordinate indicies in self.coordinates for a line
         l = len(self.coordinates)
-        for iter in range(l - 1):
-            lines.append((iter, iter + 1))
+        for i in range(l - 1):
+            lines.append((i, i + 1))
         lines.append((l - 1, 0))
 
         return lines
@@ -115,20 +118,35 @@ def area_calculation(list_of_coordinates):
     if len(list_of_coordinates) == 0: return 0
     area = 0
     l = len(list_of_coordinates)
-    for iter in range(l-1):
-        area = area + list_of_coordinates[iter][0]*list_of_coordinates[iter+1][1] - list_of_coordinates[iter][1]*list_of_coordinates[iter+1][0]
+    for i in range(l-1):
+        area = area + list_of_coordinates[i][0]*list_of_coordinates[i+1][1] - list_of_coordinates[i][1]*list_of_coordinates[i+1][0]
     area = area + list_of_coordinates[l-1][0]*list_of_coordinates[0][1] - list_of_coordinates[l-1][1]*list_of_coordinates[0][0]
     return abs(area/2)
-def get_cg(list_of_coordinates):
-    """gets CG of list of coordinates"""
-    l = len(list_of_coordinates)
-    if l == 0 : return [0, 0]
-    s = [0.0, 0.0]
-    for coor in list_of_coordinates:
-        s[0] += coor[0]
-        s[1] += coor[1]
+def get_cg(points):
+    """gets CG of area"""
+    l = len(points)
+    if len(points) < 3: raise ValueError('NOT SUFFICIENT POINTS!')
 
-    return(s[0]/l, s[1]/l)
+    sum = [0, 0]
+    area = 0
+
+    for i in range(l):
+        j = i + 1
+        if i == l - 1: j = 0
+
+        m = points[i][0]*points[j][1] - points[j][0]*points[i][1]
+        print(m)
+        sum[0] += (points[i][0]+points[j][0]) * m
+        sum[1] += (points[i][1]+points[j][1]) * m
+        area += m
+
+    area = 0.5 * area
+    sum[0] = sum[0]/(6*area)
+    sum[1] = sum[1]/(6*area)
+
+    return (sum[0], sum[1])
+
+
 def distance(point1, point2):
     """returns distance between two points"""
     return math.sqrt((point1[0] - point2[0])**2 + (point1[1] - point2[1])**2)
@@ -572,7 +590,7 @@ while(True):
         if q == "y":
             answered = True
             pass
-        elif q == "n":
+        elif q=="n":
             clear()
             quit()
         elif q=="e":
@@ -611,8 +629,6 @@ while(True):
                     DATA[edi] = float(input("Input the new value:  "))
             except:
                 print("BAD INPUT")
-
-
         elif q=="p":
             plt.close()
 
@@ -629,6 +645,61 @@ while(True):
 
 
             plt.show()
+        elif q=="a":
+            images = []
+            fig = plt.figure()
+            plt.axis('off')
+            plt.gca().set_aspect('equal', adjustable='box')
+            fig.set_size_inches(15,7)
+
+
+            r = 0
+
+            inc_l = 50
+
+            for i in range(4,58,1):
+                print("generating frames...")
+                DATA[1] = inc_l/i
+                DATA[0] = i
+
+                plt.figure(figsize=(15, 7), tight_layout=True)
+
+                plt.axis('off')
+                plt.gca().set_aspect('equal', adjustable='box')
+
+                solve_and_present()
+                plt.savefig("anim_loop/"+str(r)+".png")
+                r+=1
+                plt.close()
+            print("generated.")
+
+            myimages = []
+
+            for k in range(0, r):
+                fname = "anim_loop/"+str(k)+".png"
+                # read in pictures
+                img = mgimg.imread(fname)
+                imgplot = plt.imshow(img)
+
+                myimages.append([imgplot])
+
+
+            my_anim = animation.ArtistAnimation(fig, myimages, interval=84)
+
+            my_anim.save("animation.gif")
+        elif q=="dd":
+            rs = []
+            for i in range(2, 40, 1):
+                print("generating frames...")
+                DATA[1] = 20 / i
+                DATA[0] = 20
+                sol = main_function(DATA)
+                rs.append([sol[0][1],sol[1]])
+            print("DONE\n\n")
+            for i in range(len(rs)): print(20.0/(i+2), rs[i])
+
+
+
         else:
             clear()
             print(show_data())
