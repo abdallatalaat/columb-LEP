@@ -1,9 +1,7 @@
 import math
 import matplotlib.pyplot as plt
-from matplotlib import animation
 import os
-import matplotlib.image as mgimg
-
+import imageio
 
 cmd = 'mode 110,50'
 os.system(cmd)
@@ -11,7 +9,7 @@ os.system(cmd)
 clear = lambda: os.system('cls')
 
 #Global Variables
-DATA = [50, 0.5, 75, 12, 10, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
+DATA = [100, 0.5, 75, 12, 10, 20, 10, 5, 30, 15, 15, 3, [(10,1), (20,4)]]
 INPUT_MSGS = [("int", "\nselect the number of wedges: "),
               ("float", "\nselect the desired inclined step width (m): " ),
               ("float", "\nselect the desired wall angle (deg): " ),
@@ -647,59 +645,45 @@ while(True):
             plt.show()
 
         elif q=="a":
-            images = []
-            fig = plt.figure()
-            plt.axis('off')
-            plt.gca().set_aspect('equal', adjustable='box')
-            fig.set_size_inches(15,7)
-
-
             r = 0
-
-            inc_l = 50
-
-            for i in range(4,58,1):
+            for i in range(80,161,1):
                 print("generating frames...")
-                DATA[1] = inc_l/i
-                DATA[0] = i
+                DATA[2] = float(i)/2
 
                 plt.figure(figsize=(15, 7), tight_layout=True)
 
                 plt.axis('off')
                 plt.gca().set_aspect('equal', adjustable='box')
+                plt.ylim(-1,30)
+                plt.xlim(-20, 70)
 
                 solve_and_present()
                 plt.savefig("anim_loop/"+str(r)+".png")
                 r+=1
                 plt.close()
             print("generated.")
+            png_dir = 'anim_loop'
+            images = []
+            for file_name in [str(i)+'.png' for i in range(r)]:
+                file_path = os.path.join(png_dir, file_name)
+                images.append(imageio.imread(file_path))
+            imageio.mimsave('animation.gif', images, fps=30)
 
-            myimages = []
+        elif q=="d":
+            file_name = "data.csv"
+            f = open(file_name, 'a')
+            f.write("Step Number, Angle, Pactive\n")
 
-            for k in range(0, r):
-                fname = "anim_loop/"+str(k)+".png"
-                # read in pictures
-                img = mgimg.imread(fname)
-                imgplot = plt.imshow(img)
+            inc_l = 100
+            for i in range(200,500,5):
+                print("generating failures...")
+                DATA[0] = i
+                DATA[1] = inc_l/i
+                solution = main_function(DATA)
+                f.write(str(i)+", "+str(solution[0][1])+", "+str(solution[1])+"\n")
+            f.close()
 
-                myimages.append([imgplot])
-
-
-            my_anim = animation.ArtistAnimation(fig, myimages, interval=84)
-
-            my_anim.save("animation.gif")
-        elif q=="dd":
-            rs = []
-            for i in range(2, 40, 1):
-                print("generating frames...")
-                DATA[1] = 20 / i
-                DATA[0] = 20
-                sol = main_function(DATA)
-                rs.append([sol[0][1],sol[1]])
-            print("DONE\n\n")
-            for i in range(len(rs)): print(20.0/(i+2), rs[i])
-
-
+            print("generated.")
 
         else:
             clear()
