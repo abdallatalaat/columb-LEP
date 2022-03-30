@@ -96,11 +96,16 @@ class FailureWedge:
                       init_soil_coor[1]+ dista*math.sin(math.radians(backfill_angle))/2)
         sur_line = uniform_surcharge * dista
 
-        sat_cg = get_cg(self.sat_coordinates)
         unsat_cg = get_cg(self.unsat_coordinates)
         sub_density = self.density-self.water_density
 
         if len(self.sat_coordinates) == 0: sub_density = 0
+
+        try: sat_cg = get_cg(self.sat_coordinates)
+        except:
+            sub_density = 0
+            sat_cg = [0,0]
+
 
         return ((surch_coor[0]*sur_line + unsat_cg[0]*self.density + sat_cg[0]*(sub_density))/(sur_line+self.density+sub_density),
                 (surch_coor[1]*sur_line + unsat_cg[1]*self.density + sat_cg[1]*(sub_density))/(sur_line+self.density+sub_density))
@@ -423,7 +428,8 @@ def main_function(data, water_density=10):
         if stress_at_GWT >= 0:
             h_crack = (2 * cohesion - uniform_surcharge * math.sqrt(ka)) / (density * math.sqrt(ka))
         else:
-            h_crack = -1 * stress_at_GWT / (ka * (density - water_density))
+            x = ((2*cohesion/math.sqrt(ka))-uniform_surcharge-density*(vertical_wall_height-GWT_level))/(density-water_density)
+            h_crack = vertical_wall_height-GWT_level+x
 
     #abort if h_crack > vertical height
     if h_crack > vertical_wall_height:
@@ -469,6 +475,7 @@ def main_function(data, water_density=10):
             dista = num * inclined_width
 
 
+    print(dista, init_soil_coor, backfill_angle)
     cg_wedge = active_failure_wedge.get_wedge_cg(uniform_surcharge, dista, init_soil_coor, backfill_angle)
     p_active_point = get_p_active_point(wall_coordinates,active_failure_angle,cg_wedge)
 
@@ -646,9 +653,10 @@ while(True):
 
         elif q=="a":
             r = 0
-            for i in range(80,161,1):
+            for i in range(0,51,1):
                 print("generating frames...")
-                DATA[2] = float(i)/2
+                DATA[6] = i/2.0
+                DATA[7] = i/4.0
 
                 plt.figure(figsize=(15, 7), tight_layout=True)
 
@@ -671,16 +679,17 @@ while(True):
 
         elif q=="d":
             file_name = "data.csv"
-            f = open(file_name, 'a')
-            f.write("Step Number, Angle, Pactive\n")
+            f = open(file_name, 'w')
+            f.write("Friction Angle, Angle, Pactive, Rankine Angle, Rankine Pactive\n")
 
-            inc_l = 100
-            for i in range(200,500,5):
+            for i in range(200,501,1):
                 print("generating failures...")
-                DATA[0] = i
-                DATA[1] = inc_l/i
+
+                DATA[8] = i/10.0
+                DATA[9] = 2*DATA[8]/3.0
                 solution = main_function(DATA)
-                f.write(str(i)+", "+str(solution[0][1])+", "+str(solution[1])+"\n")
+
+                f.write(str(i/10.0)+", "+str(solution[0][1])+", "+str(solution[1])+"\n")
             f.close()
 
             print("generated.")
